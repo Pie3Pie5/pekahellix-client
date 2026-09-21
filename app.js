@@ -17,7 +17,19 @@ let code="",campaign=null,i=0,answers={};
 function selected(v){answers[Q[i].id]=v;render();}
 function render(){const q=Q[i],v=answers[q.id];$("stepLabel").textContent=`Question ${i+1} sur ${Q.length}`;$("pct").textContent=`${Math.round((i/Q.length)*100)} %`;$("bar").style.width=`${Math.round((i/Q.length)*100)}%`;$("dimension").textContent=q.dimension;$("question").textContent=q.text;$("answers").className="answers";$("answers").innerHTML="";
  if(q.type==="mirror"){["Pas du tout","Plutôt non","Plutôt oui","Tout à fait","Je ne sais pas / Non concerné"].forEach((t,n)=>{const val=n<4?n+1:null,b=document.createElement("button");b.className="answer"+(Object.prototype.hasOwnProperty.call(answers,q.id)&&v===val?" selected":"");b.textContent=t;b.onclick=()=>selected(val);$("answers").appendChild(b);});}
- if(q.type==="nps"){$("answers").classList.add("nps");for(let n=0;n<=10;n++){const b=document.createElement("button");b.className="answer"+(v===n?" selected":"");b.textContent=n;b.onclick=()=>selected(n);$("answers").appendChild(b);}const labels=document.createElement("div");labels.className="scale-labels";labels.style.gridColumn="1/-1";labels.innerHTML="<span>Pas du tout probable</span><span>Tout à fait probable</span>";$("answers").appendChild(labels);}
+ if(q.type==="nps"){
+  $("answers").classList.add("nps-slider-wrap");
+  const hasValue=Object.prototype.hasOwnProperty.call(answers,q.id);
+  const current=hasValue?Number(v):5;
+  const labels=["Pas du tout probable","Très peu probable","Peu probable","Plutôt peu probable","Mitigé","Neutre","Plutôt probable","Probablement oui","Probablement oui","Très probable","Tout à fait probable"];
+  const box=document.createElement("div");box.className="nps-value"+(hasValue?"":" is-empty");
+  box.innerHTML=`<strong>${hasValue?current:"—"}</strong><span>${hasValue?labels[current]:"Déplacez le curseur"}</span>`;
+  const slider=document.createElement("input");slider.type="range";slider.min="0";slider.max="10";slider.step="1";slider.value=current;slider.className="nps-slider";slider.setAttribute("aria-label","Probabilité de recommandation de 0 à 10");
+  const update=(commit)=>{const n=Number(slider.value);box.classList.remove("is-empty");box.innerHTML=`<strong>${n}</strong><span>${labels[n]}</span>`;slider.style.setProperty("--nps-pos",`${n*10}%`);if(commit){answers[q.id]=n;$("nextBtn").disabled=false;}};
+  slider.style.setProperty("--nps-pos",`${current*10}%`);slider.addEventListener("input",()=>update(true));
+  const scale=document.createElement("div");scale.className="nps-scale";scale.innerHTML='<span><b>0</b><small>Pas du tout probable</small></span><span><b>10</b><small>Tout à fait probable</small></span>';
+  $("answers").append(box,slider,scale);
+ }
  if(q.type==="text"){const ta=document.createElement("textarea");ta.className="textarea";ta.maxLength=1000;ta.placeholder="Votre réponse (facultative)";ta.value=v||"";ta.oninput=e=>{answers[q.id]=e.target.value};$("answers").appendChild(ta);}
  $("prevBtn").style.visibility=i?"visible":"hidden";$("nextBtn").textContent=i===Q.length-1?"Envoyer mes réponses":"Question suivante";$("nextBtn").disabled=!q.optional&&!Object.prototype.hasOwnProperty.call(answers,q.id);
 }
