@@ -14,6 +14,11 @@ const sb=(cfg.supabaseUrl&&cfg.supabasePublishableKey&&!cfg.supabaseUrl.startsWi
 const $=id=>document.getElementById(id); const screens=["loading","invalid","intro","survey","sending","thanks","error"];
 const show=id=>screens.forEach(x=>$(x).classList.toggle("hidden",x!==id));
 let code="",campaign=null,i=0,answers={};
+function getClientToken(){
+  const key="peka_client_browser_token"; let token=localStorage.getItem(key);
+  if(!token){token=(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2));localStorage.setItem(key,token);}
+  return token;
+}
 function scrollToNextButton(){setTimeout(()=>$("nextBtn").scrollIntoView({behavior:"smooth",block:"center"}),120);}
 function scrollToQuestion(){setTimeout(()=>$("dimension").scrollIntoView({behavior:"smooth",block:"start"}),80);}
 function selected(v){answers[Q[i].id]=v;render();scrollToNextButton();}
@@ -35,12 +40,13 @@ function render(){const q=Q[i],v=answers[q.id];$("stepLabel").textContent=`Quest
  if(q.type==="text"){const ta=document.createElement("textarea");ta.className="textarea";ta.maxLength=1000;ta.placeholder="Votre réponse (facultative)";ta.value=v||"";ta.oninput=e=>{answers[q.id]=e.target.value};$("answers").appendChild(ta);}
  $("prevBtn").style.visibility=i?"visible":"hidden";$("nextBtn").textContent=i===Q.length-1?"Envoyer mes réponses":"Question suivante";$("nextBtn").disabled=!q.optional&&!Object.prototype.hasOwnProperty.call(answers,q.id);
 }
-async function submit(){show("sending");try{const payload={};Q.forEach(q=>payload[q.id]={dimension:q.dimension,type:q.type,value:answers[q.id]??null});const {error}=await sb.rpc("submit_communication_customer_response",{p_public_code:code,p_responses:payload,p_nps:answers["NPS-01"]});if(error)throw error;sessionStorage.setItem(`peka_client_done_${code}`,"1");show("thanks");}catch(e){$("errorText").textContent="Vos réponses n'ont pas pu être envoyées. Vérifiez votre connexion puis réessayez.";show("error");}}
+async function submit(){show("sending");try{const payload={};Q.forEach(q=>payload[q.id]={dimension:q.dimension,type:q.type,value:answers[q.id]??null});const {error}=await sb.rpc("submit_communication_customer_response",{p_public_code:code,p_responses:payload,p_nps:answers["NPS-01"],p_client_token:getClientToken()});if(error)throw error;sessionStorage.setItem(`peka_client_done_${code}`,"1");show("thanks");}catch(e){const msg=String(e?.message||"");$("errorText").textContent=msg.includes("DUPLICATE_3_MIN")?"Cette réponse est identique à une réponse envoyée depuis cet appareil il y a moins de 3 minutes. Si une autre personne souhaite répondre, modifiez ses réponses ou réessayez une fois ce délai écoulé.":"Vos réponses n'ont pas pu être envoyées. Vérifiez votre connexion puis réessayez.";show("error");}}
+$("anotherResponseBtn").onclick=()=>{answers={};i=0;sessionStorage.removeItem(`peka_client_done_${code}`);const notice=$("newResponseNotice");if(notice)notice.classList.remove("hidden");show("intro");window.scrollTo({top:0,behavior:"smooth"});};
 $("startBtn").onclick=()=>{i=0;show("survey");render()};$("prevBtn").onclick=()=>{if(i>0){i--;render()}};$("nextBtn").onclick=()=>{const q=Q[i];if(!q.optional&&!Object.prototype.hasOwnProperty.call(answers,q.id))return;if(i<Q.length-1){i++;render();scrollToQuestion()}else submit()};$("retryBtn").onclick=submit;
 (async()=>{code=(new URLSearchParams(location.search).get("c")||"").trim();if(!sb||!code){show("invalid");return}if(sessionStorage.getItem(`peka_client_done_${code}`)){show("thanks");return}try{const {data,error}=await sb.rpc("get_communication_customer_campaign",{p_public_code:code});if(error||!data||!data.length){show("invalid");return}campaign=data[0];$("merchantName").textContent=campaign.organization_name||"Questionnaire client";show("intro");}catch{show("invalid")}})();
 if("serviceWorker" in navigator)window.addEventListener("load",async()=>{
   try{
-    const reg=await navigator.serviceWorker.register("./sw.js?v=0.1.2",{updateViaCache:"none"});
+    const reg=await navigator.serviceWorker.register("./sw.js?v=0.1.3",{updateViaCache:"none"});
     await reg.update();
     let refreshing=false;
     navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!refreshing){refreshing=true;location.reload();}});

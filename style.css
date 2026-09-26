@@ -16,3 +16,6 @@
 .nps-scale span{display:grid;gap:1px}.nps-scale span:last-child{text-align:right}
 .nps-scale b{color:#294f6d;font-size:1rem}.nps-scale small{font-size:.72rem}
 @media(max-width:480px){.nps-value{min-width:150px;padding:9px 14px}.nps-value strong{font-size:2rem}.nps-value span{font-size:.82rem}.nps-slider{height:40px}.nps-scale small{font-size:.68rem}.nav{margin-top:22px}}
+
+.new-response-notice{margin:0 0 14px;padding:12px 14px;border-radius:12px;background:#eef6fb;color:#244b68;font-weight:600}
+.another-response{margin-top:20px}
